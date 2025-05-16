@@ -1220,7 +1220,14 @@ static void ch341_tty_set_termios(struct tty_struct *tty,
 
 	if (newline.dwDTERate == 0)
 		newline.dwDTERate = 9600;
-	ch341_get(newline.dwDTERate, &factor, &divisor);
+
+	if (newline.dwDTERate == 31250) {
+		// Force known-good values for 31250 baud (MIDI)
+		factor = 0xD9;
+		divisor = 0x00;
+	} else {
+		ch341_get(newline.dwDTERate, &factor, &divisor);
+	}
 
 	newline.bCharFormat = termios->c_cflag & CSTOPB ? 2 : 1;
 	if (newline.bCharFormat == 2)
