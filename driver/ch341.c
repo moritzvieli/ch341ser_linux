@@ -29,6 +29,7 @@
  *      - fix data analysis in status ep callback
  * V1.7 - add support for kernel version beyond 6.3.x
  * V1.8 - add support for kernel version beyond 6.5.x
+ * V1.9 - support newer kernels and MIDI baud rate
  */
 
 #define DEBUG
@@ -55,7 +56,6 @@
 #include <linux/usb/cdc.h>
 #include <linux/version.h>
 #include <asm/byteorder.h>
-#include <asm/unaligned.h>
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
 #include <linux/sched/signal.h>
@@ -69,6 +69,14 @@
 
 static struct usb_driver ch341_driver;
 static struct tty_driver *ch341_tty_driver;
+
+#ifndef get_unaligned_le16
+static inline __le16 get_unaligned_le16(const void *p)
+{
+    const u8 *b = p;
+    return b[0] | (b[1] << 8);
+}
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0))
 static DEFINE_IDR(ch341_minors);
@@ -1140,6 +1148,11 @@ static int ch341_get(unsigned int baval, unsigned char *factor,
 		a = 0xd9;
 		b = 7;
 		break;
+	case 31250:
+		// MIDI baud rate
+        a = 0x9D;
+        b = 1;
+        break;
 	default:
 		if (baval > 6000000 / 255) {
 			b = 3;
@@ -1155,7 +1168,7 @@ static int ch341_get(unsigned int baval, unsigned char *factor,
 			c = 11719;
 		}
 		a = (unsigned char)(c / baval);
-		if (a == 0 || a == 0xFF)
+		if ((a == 0 || a == 0xFF) && baval != 31250)
 			return -EINVAL;
 		if ((c / a - baval) > (baval - c / (a + 1)))
 			a++;
