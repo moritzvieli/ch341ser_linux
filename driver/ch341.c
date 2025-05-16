@@ -1150,9 +1150,9 @@ static int ch341_get(unsigned int baval, unsigned char *factor,
 		break;
 	case 31250:
 		// MIDI baud rate
-        a = 0x9D;
-        b = 1;
-        break;
+		a = 0xD9;
+		b = 0;
+		break;
 	default:
 		if (baval > 6000000 / 255) {
 			b = 3;
